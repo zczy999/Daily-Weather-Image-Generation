@@ -1,0 +1,10 @@
+# 环境变量
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+
+# 生成的图片
+generated_images/

@@ -1,0 +1,11 @@
+services:
+  weather-image:
+    build: .
+    container_name: daily-weather-image
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./generated_images:/app/generated_images
+    environment:
+      - TZ=Asia/Shanghai
