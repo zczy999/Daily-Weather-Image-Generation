@@ -7,5 +7,6 @@ services:
       - .env
     volumes:
       - ./generated_images:/app/generated_images
+      - ./logs:/app/logs
     environment:
       - TZ=Asia/Shanghai

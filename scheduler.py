@@ -1,3 +1,4 @@
+import logging
 import os
 import smtplib
 import time
@@ -10,6 +11,34 @@ import schedule
 from dotenv import load_dotenv
 
 from main import generate_weather_image
+
+# 配置日志
+def setup_logging():
+    """配置日志：同时输出到控制台和文件"""
+    os.makedirs("logs", exist_ok=True)
+
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # 控制台处理器
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    # 文件处理器
+    file_handler = logging.FileHandler("logs/app.log", encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    # 配置 root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()
@@ -33,7 +62,7 @@ def send_email(image_path, weather_info, landmark, city="杭州市"):
     email_to = os.getenv("EMAIL_TO")
 
     if not all([smtp_host, smtp_user, smtp_password, email_to]):
-        print("邮件配置不完整，请检查 .env 文件")
+        logger.error("邮件配置不完整，请检查 .env 文件")
         return False
 
     # 创建邮件
@@ -76,26 +105,26 @@ def send_email(image_path, weather_info, landmark, city="杭州市"):
 
     # 发送邮件
     try:
-        print(f"正在发送邮件到 {email_to}...")
+        logger.info(f"正在发送邮件到 {email_to}...")
         server = smtplib.SMTP_SSL(smtp_host, smtp_port)
         server.login(smtp_user, smtp_password)
         server.sendmail(smtp_user, email_to.split(","), msg.as_string())
-        print("邮件发送成功！")
+        logger.info("邮件发送成功！")
         try:
             server.quit()
         except Exception:
             pass  # 忽略关闭连接时的错误
         return True
     except Exception as e:
-        print(f"邮件发送失败：{e}")
+        logger.error(f"邮件发送失败：{e}")
         return False
 
 
 def daily_task():
     """每日定时任务"""
-    print(f"\n{'='*50}")
-    print(f"开始执行定时任务 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*50}\n")
+    logger.info("=" * 50)
+    logger.info(f"开始执行定时任务 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("=" * 50)
 
     # 生成图片
     city = os.getenv("CITY", "杭州市")
@@ -105,20 +134,19 @@ def daily_task():
         # 发送邮件
         send_email(image_path, weather_info, landmark, city)
     else:
-        print("图片生成失败，跳过发送邮件")
+        logger.warning("图片生成失败，跳过发送邮件")
 
-    print(f"\n{'='*50}")
-    print(f"定时任务执行完毕")
-    print(f"{'='*50}\n")
+    logger.info("=" * 50)
+    logger.info("定时任务执行完毕")
+    logger.info("=" * 50)
 
 
 def run_scheduler():
     """运行定时调度器"""
     schedule_time = os.getenv("SCHEDULE_TIME", "08:00")
 
-    print(f"定时任务已启动")
-    print(f"执行时间：每天 {schedule_time}")
-    print(f"按 Ctrl+C 停止\n")
+    logger.info("定时任务已启动")
+    logger.info(f"执行时间：每天 {schedule_time}")
 
     # 设置每日定时任务
     schedule.every().day.at(schedule_time).do(daily_task)
@@ -134,7 +162,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1] == "now":
         # 立即执行一次
-        print("立即执行任务...")
+        logger.info("立即执行任务...")
         daily_task()
     else:
         # 启动定时调度器

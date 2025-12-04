@@ -8,3 +8,6 @@ venv/
 
 # 生成的图片
 generated_images/
+
+# 日志
+logs/

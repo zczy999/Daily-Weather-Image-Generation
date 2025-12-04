@@ -1,9 +1,12 @@
+import logging
 import os
 import random
 import urllib.request
 from datetime import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()
@@ -43,7 +46,7 @@ def get_client():
 
 def query_weather(client, city, date_str):
     """查询城市天气"""
-    print(f"正在查询 {city} 的天气...")
+    logger.info(f"正在查询 {city} 的天气...")
     response = client.chat.completions.create(
         model="gemini-3-pro-preview",
         extra_body={"refresh_session": True},
@@ -68,13 +71,13 @@ def query_weather(client, city, date_str):
         stream=False
     )
     weather_info = response.choices[0].message.content
-    print(f"天气查询结果：\n{weather_info}\n")
+    logger.info(f"天气查询结果：\n{weather_info}")
     return weather_info
 
 
 def generate_image(client, city, date_str, date_time, landmark, weather_info):
     """根据天气生成图片"""
-    print(f"正在生成 {city} 天气图片（地标：{landmark}）...")
+    logger.info(f"正在生成 {city} 天气图片（地标：{landmark}）...")
 
     image_prompt = f"""
 【{city}，{date_str}】
@@ -166,16 +169,16 @@ def download_image(response, city):
         for item in content:
             if item.get("type") == "image_url":
                 url = item["image_url"]["url"]
-                print(f"图片 URL：{url}")
+                logger.info(f"图片 URL：{url}")
 
                 file_date = datetime.now().strftime("%Y%m%d_%H%M")
                 file_path = f"generated_images/{city}_{file_date}.png"
 
                 urllib.request.urlretrieve(url, file_path)
-                print(f"图片已保存：{file_path}")
+                logger.info(f"图片已保存：{file_path}")
                 return file_path
     else:
-        print(f"响应内容：{content}")
+        logger.warning(f"响应内容：{content}")
         return None
 
 
@@ -196,7 +199,7 @@ def generate_weather_image(city="杭州市"):
         date_time = datetime.now().strftime("%H:%M")
         landmark = random.choice(LANDMARKS)
 
-        print(f"本次选中地标：{landmark}")
+        logger.info(f"本次选中地标：{landmark}")
 
         # 查询天气
         weather_info = query_weather(client, city, date_str)
@@ -210,12 +213,17 @@ def generate_weather_image(city="杭州市"):
         return image_path, weather_info, landmark
 
     except Exception as e:
-        print(f"生成图片失败：{e}")
+        logger.error(f"生成图片失败：{e}")
         return None, None, None
 
 
 # 直接运行时执行
 if __name__ == "__main__":
+    # 单独运行时配置日志
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     image_path, weather_info, landmark = generate_weather_image()
     if image_path:
-        print(f"\n生成完成！图片路径：{image_path}")
+        logger.info(f"生成完成！图片路径：{image_path}")
